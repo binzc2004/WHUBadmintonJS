@@ -7,8 +7,9 @@
 // @match        *://gym.whu.edu.cn/*
 // @grant        none
 // @run-at       document-start
+// @downloadURL  https://raw.githubusercontent.com/binzc2004/WHUBadmintonJS/main/whu.user.js
+// @updateURL    https://raw.githubusercontent.com/binzc2004/WHUBadmintonJS/main/whu.user.js
 // ==/UserScript==
-
 (function() {
     'use strict';
 
@@ -89,6 +90,7 @@
     }
     function smartOrderFlexible(info, response) {
         const times = response.AppointmentTimes;
+        console.log(times);
         if (!times || times.length === 0) {
             showLog("❌ 无可用预约时段数据", "error");
             return;
@@ -130,6 +132,10 @@
     async function pollWDToken(headers) {
         const url = `https://gym.whu.edu.cn/api/GSStadiums/GetAppointmentDetail?Version=3&StadiumsAreaId=${targetInfo.stadiumsAreaId}&StadiumsAreaNo=${targetInfo.stadiumsAreaNo}&AppointmentDate=${targetInfo.appointmentStartDate.slice(0,10)}`;
         let count = 0;
+        let delay=800;
+        let minDelay=50;
+        let decay=0.5;
+        
         while (true) {
             count++;
             try {
@@ -137,8 +143,9 @@
                 const d = await r.json();
                 if (d.success && d.WDToken) return { WDToken: d.WDToken, info: d.response };
             } catch(e) {}
-            if (count % 20 === 0) showLog(`轮询中(累计 ${count} 次)...`);
-            await sleep(250);
+            if (count % 5 === 0) showLog(`轮询中(累计 ${count} 次)...`);
+            await sleep(delay);
+            delay = Math.max(minDelay, delay * decay);
         }
     }
 
@@ -306,7 +313,7 @@
 
         targetInfo.appointmentStartDate = `${date} ${match[1]}`;
         targetInfo.appointmentEndDate = `${date} ${match[2]}`;
-        globalSleepTime = parseInt(sleepInput) || 2000;
+        globalSleepTime = parseInt(sleepInput) || 0;
 
         closeModal();
         const t = document.getElementById('whu-toast'); t.textContent = "✓ 参数锁定成功"; t.style.display = "block";
