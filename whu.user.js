@@ -57,6 +57,7 @@
 
     // --- 3. 核心接管逻辑 ---
     async function startExclusiveHeist(headers, bodyStr) {
+        showLog("脚本版本v1.0.0");
         showLog("!!! 原始请求已杀死，脚本接管成功 !!!", "warn");
 
         let vToken = "";
@@ -67,7 +68,7 @@
 
         if (!isDevMode) {
             const targetTime = new Date();
-            targetTime.setHours(17, 59, 59, 0);
+            targetTime.setHours(17, 59, 58, 0);
             if (new Date() < targetTime) {
                 showLog(`定时模式：等待 17:59:59 开闸...`, "warn");
                 while (new Date() < targetTime) await sleep(500);
@@ -133,8 +134,8 @@
         const url = `https://gym.whu.edu.cn/api/GSStadiums/GetAppointmentDetail?Version=3&StadiumsAreaId=${targetInfo.stadiumsAreaId}&StadiumsAreaNo=${targetInfo.stadiumsAreaNo}&AppointmentDate=${targetInfo.appointmentStartDate.slice(0,10)}`;
         let count = 0;
         let delay=800;
-        let minDelay=50;
-        let decay=0.5;
+        let minDelay=200;
+        let decay=0.6;
         
         while (true) {
             count++;
@@ -143,7 +144,7 @@
                 const d = await r.json();
                 if (d.success && d.WDToken) return { WDToken: d.WDToken, info: d.response };
             } catch(e) {}
-            if (count % 5 === 0) showLog(`轮询中(累计 ${count} 次)...`);
+            showLog(`轮询中(累计 ${count} 次)...`);
             await sleep(delay);
             delay = Math.max(minDelay, delay * decay);
         }
@@ -342,7 +343,13 @@
     const rawSend = XMLHttpRequest.prototype.send;
     XMLHttpRequest.prototype.send = function(body) {
         if (this._url && this._url.includes("/api/GSOrder/Create")) {
-            startExclusiveHeist(this._headers || {}, body);
+            const headers = Object.assign({}, this._headers);
+            // 只做“通用处理”，不做伪装用途
+            delete headers["Sec-Ch-Ua-Platform"];
+            delete headers["Sec-Ch-Ua-Mobile"];
+            delete headers["Sec-Ch-Ua"];
+            headers["X-Requested-With"] = "com.chaoxing.mobile.wuhanuniversity";
+            startExclusiveHeist(headers || {}, body);
             this.abort();
             return;
         }
