@@ -15,7 +15,7 @@
 
     // --- 1. 核心状态与配置 ---
     let isDevMode = false;
-    let globalSleepTime = 0; // 默认 2000ms
+    let globalSleepTime = 1500; // 默认 2000ms
     const timeOrder = ["08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"];
     const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -68,7 +68,7 @@
 
         if (!isDevMode) {
             const targetTime = new Date();
-            targetTime.setHours(17, 59, 58, 0);
+            targetTime.setHours(17, 59, 59, 0);
             if (new Date() < targetTime) {
                 showLog(`定时模式：等待 17:59:59 开闸...`, "warn");
                 while (new Date() < targetTime) await sleep(500);
@@ -242,7 +242,7 @@
 
                 <div class="whu-input-group">
                     <label>延迟提交(ms):</label>
-                    <input type="number" id="whu-sleep" value="2000" step="100">
+                    <input type="number" id="whu-sleep" value="1500" step="100">
                 </div>
 
                 <label style="font-size:12px;color:#666">时段选择 (可多选相邻)</label>
@@ -314,7 +314,7 @@
 
         targetInfo.appointmentStartDate = `${date} ${match[1]}`;
         targetInfo.appointmentEndDate = `${date} ${match[2]}`;
-        globalSleepTime = parseInt(sleepInput) || 0;
+        globalSleepTime = parseInt(sleepInput) || 1500;
 
         closeModal();
         const t = document.getElementById('whu-toast'); t.textContent = "✓ 参数锁定成功"; t.style.display = "block";
