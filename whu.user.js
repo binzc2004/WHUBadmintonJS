@@ -1,11 +1,11 @@
 // ==UserScript==
-// @name         羽毛球预约-原地接管(UI调节延迟版)
+// @name         羽毛球预约-GM请求
 // @namespace    http://tampermonkey.net/
 // @version      2026-04-04
 // @description  杀死原请求+可调睡眠时间+完整UI配置+详细日志监控
 // @author       Gemini
 // @match        *://gym.whu.edu.cn/*
-// @grant        none
+// @grant        GM_xmlhttpRequest
 // @run-at       document-start
 // @downloadURL  https://raw.githubusercontent.com/binzc2004/WHUBadmintonJS/main/whu.user.js
 // @updateURL    https://raw.githubusercontent.com/binzc2004/WHUBadmintonJS/main/whu.user.js
@@ -163,34 +163,132 @@
             f_notify: "https://gym.whu.edu.cn/hsdsqhafive/pages/order/success?type=3"
         };
 
-        const startTime = performance.now(); // 请求发出时间（高精度）
-        const startDate = new Date(); // 可打印的时间点
-        showLog(`⏱ 请求发出时间: ${startDate.toLocaleTimeString()}.${startDate.getMilliseconds()}`, "info");
+        const startTime = performance.now();
+        const startDate = new Date();
 
-        fetch("https://gym.whu.edu.cn/api/GSOrder/Create", {
+        showLog(
+            `⏱ 请求发出时间: ${startDate.toLocaleTimeString()}.${startDate.getMilliseconds()}`,
+            "info"
+        );
+
+        // ===== 合并请求头 =====
+        const finalHeaders = {
+
+            // ===== 原本已有 headers（attestation等）=====
+            ...headers,
+
+            // ===== 你的 APP 头 =====
+            "Content-Type":
+                "application/json",
+
+            "X-Requested-With":
+                "com.chaoxing.mobile.wuhanuniversity",
+
+            "Referer":
+                "https://gym.whu.edu.cn/hsdsqhafive/pages/index/detail?areaId=11&areaNo=1&date=2026-05-08",
+
+            "User-Agent":
+                "Mozilla/5.0 (Linux; Android 12; SM-N9006 Build/V417IR; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/110.0.5481.154 Mobile Safari/537.36(schild:b67ef2d1e2a74010968b9bfc07968fa4) (device:24031PN0DC) Language/zh_CN com.chaoxing.mobile.wuhanuniversity/ChaoXingStudy_1000028_5.3.5_android_phone_635_233 (@Kalimdor)_c65aa9acb0164dd2a19de45f9705dae1",
+            "Sec-Fetch-Site":"same-origin",
+            "Accept":
+                "*/*"
+        };
+
+        // ===== 删除浏览器特征头（如果 headers 里有）=====
+        delete finalHeaders["Sec-Ch-Ua"];
+        delete finalHeaders["Sec-Ch-Ua-Mobile"];
+        delete finalHeaders["Sec-Ch-Ua-Platform"];
+
+        delete finalHeaders["sec-ch-ua"];
+        delete finalHeaders["sec-ch-ua-mobile"];
+        delete finalHeaders["sec-ch-ua-platform"];
+
+        // ===== 发起 GM 请求 =====
+        GM_xmlhttpRequest({
+
             method: "POST",
-            headers: { ...headers, "Content-Type": "application/json" },
-            body: JSON.stringify(data)
-        })
-            .then(r => r.json())
-            .then(res => {
-            const endTime = performance.now(); // 请求返回时间（高精度）
-            const endDate = new Date();
-            const elapsed = endTime - startTime; // 总耗时，单位 ms
 
-            showLog(`⏱ 响应接收时间: ${endDate.toLocaleTimeString()}.${endDate.getMilliseconds()}`, "info");
-            showLog(`⏱ 总耗时: ${elapsed.toFixed(2)} ms`, "info");
+            url:
+                "https://gym.whu.edu.cn/api/GSOrder/Create",
 
-            if (res.success) {
-                showLog("✅ 预约成功！正在跳转...", "success");
-                alert(`抢票成功！\n请尽快完成支付。`);
-            } else {
-                showLog(`❌ 下单失败: ${res.msg}`, "error");
-                alert(`失败原因: ${res.msg}`);
+            anonymous: false,
+
+            headers: finalHeaders,
+
+            data: JSON.stringify(data),
+
+            timeout: 10000,
+
+            onload(res) {
+
+                const endTime = performance.now();
+                const endDate = new Date();
+
+                const elapsed = endTime - startTime;
+
+                showLog(
+                    `⏱ 响应接收时间: ${endDate.toLocaleTimeString()}.${endDate.getMilliseconds()}`,
+                    "info"
+                );
+
+                showLog(
+                    `⏱ 总耗时: ${elapsed.toFixed(2)} ms`,
+                    "info"
+                );
+
+                let result;
+
+                try {
+                    result = JSON.parse(res.responseText);
+                } catch (e) {
+
+                    showLog(
+                        `❌ JSON解析失败: ${e}`,
+                        "error"
+                    );
+
+                    console.log(res.responseText);
+
+                    return;
+                }
+
+                if (result.success) {
+
+                    showLog(
+                        "✅ 预约成功！正在跳转...",
+                        "success"
+                    );
+
+                    alert("抢票成功！请尽快完成支付。");
+
+                } else {
+
+                    showLog(
+                        `❌ 下单失败: ${result.msg}`,
+                        "error"
+                    );
+
+                    alert(`失败原因: ${result.msg}`);
+                }
+            },
+
+            ontimeout() {
+
+                showLog(
+                    "❌ 请求超时",
+                    "error"
+                );
+            },
+
+            onerror(err) {
+
+                showLog(
+                    `❌ 请求异常: ${JSON.stringify(err)}`,
+                    "error"
+                );
+
+                console.error(err);
             }
-        })
-            .catch(err => {
-            showLog(`❌ 请求异常: ${err}`, "error");
         });
     }
 
